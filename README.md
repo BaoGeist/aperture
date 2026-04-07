@@ -74,6 +74,7 @@ All use `Ctrl` (Linux-friendly):
 | `Ctrl+F` | Find in file |
 | `Ctrl+S` | Save current file |
 | `Ctrl+W` | Close current tab |
+| `Ctrl+A` | Select all text |
 
 ---
 

@@ -51,6 +51,8 @@
 				closeTab(activeTabIndex);
 			}
 		}
+		// Ctrl+A for select all - let browser handle it naturally
+		// (no preventDefault, just allow it to work)
 	}
 
 	function openFile(event: CustomEvent) {
@@ -147,6 +149,7 @@
 						<div><kbd>Ctrl+O</kbd> Jump to directory (zoxide)</div>
 						<div><kbd>Ctrl+F</kbd> Find in file</div>
 						<div><kbd>Ctrl+S</kbd> Save</div>
+						<div><kbd>Ctrl+A</kbd> Select all</div>
 					</div>
 				</div>
 			</div>

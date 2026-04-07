@@ -32,7 +32,7 @@
 - [ ] **Bracket Auto-Close** - Auto-close `{}`, `[]`, `()`, `""`
 - [ ] **Word Wrap Toggle** - Enable/disable line wrapping
 - [ ] **Undo/Redo** - `Ctrl+Z` / `Ctrl+Shift+Z`
-- [ ] **Select All** - `Ctrl+A`
+- [x] ~~**Select All**~~ ✅ DONE - `Ctrl+A` (native browser support)
 - [ ] **Font Size Controls** - `Ctrl++`, `Ctrl+-`, `Ctrl+0`
 
 ### Low Priority
