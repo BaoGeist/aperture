@@ -45,8 +45,8 @@ sudo dpkg -i src-tauri/target/release/bundle/deb/aperture_*.deb
 - ✅ **Line numbers** in editor
 - ✅ **Syntax highlighting** for 16+ languages (Shiki)
 - ✅ Quick open with fuzzy search (`Ctrl+K`) - uses `fd`
+- ✅ **Smart find** with match counting and navigation (`Ctrl+F`)
 - ✅ Zoxide directory jumping (`Ctrl+O`)
-- ✅ Find in file overlay (`Ctrl+F`)
 - ✅ Git branch display in footer
 - ✅ **Git status indicators** in sidebar (M/U/A/D)
 - ✅ Save files (`Ctrl+S`)

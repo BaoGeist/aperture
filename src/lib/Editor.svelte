@@ -10,6 +10,23 @@
 	let highlightedCode = $state('');
 	let useHighlighting = $state(true);
 
+	export function scrollToPosition(start: number, end: number) {
+		if (!textarea) return;
+		
+		// Set selection to the match
+		textarea.focus();
+		textarea.setSelectionRange(start, end);
+		
+		// Scroll to make it visible
+		// This is a bit hacky but works: temporarily set scrollTop based on line
+		const textBeforeMatch = content.substring(0, start);
+		const lineNumber = textBeforeMatch.split('\n').length;
+		const lineHeight = 22.4; // 14px * 1.6 line-height
+		const scrollTarget = (lineNumber - 1) * lineHeight - 100; // Offset by 100px for visibility
+		
+		textarea.parentElement!.scrollTop = Math.max(0, scrollTarget);
+	}
+
 	// Detect language from file extension
 	function detectLanguage(path: string): string {
 		const ext = path.split('.').pop()?.toLowerCase();

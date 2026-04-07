@@ -18,6 +18,7 @@
 	let showZoxide = $state(false);
 	let gitBranch = $state('');
 	let sidebarComponent: any;
+	let editorComponent: any;
 
 	onMount(() => {
 		window.addEventListener('keydown', handleKeyDown);
@@ -166,6 +167,13 @@
 			sidebarComponent.loadDirectory?.(path);
 		}
 	}
+
+	function handleScrollToMatch(event: CustomEvent) {
+		const { start, end } = event.detail;
+		if (editorComponent) {
+			editorComponent.scrollToPosition(start, end);
+		}
+	}
 </script>
 
 <div class="app">
@@ -186,6 +194,7 @@
 		
 		{#if tabs.length > 0}
 			<Editor 
+				bind:this={editorComponent}
 				bind:content={tabs[activeTabIndex].content}
 				filePath={tabs[activeTabIndex].path}
 				on:change={updateTabContent}
@@ -220,7 +229,11 @@
 {/if}
 
 {#if showFind && tabs.length > 0}
-	<FindInFile on:close={() => showFind = false} />
+	<FindInFile 
+		content={tabs[activeTabIndex].content}
+		on:close={() => showFind = false}
+		on:scrollToMatch={handleScrollToMatch}
+	/>
 {/if}
 
 {#if showZoxide}

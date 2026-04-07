@@ -21,8 +21,8 @@
 ## 🚧 Missing Features (From Original Plan)
 
 ### High Priority (Remaining)
-- [ ] **CLI Launcher** - `aperture file.txt`, `aperture ~/projects`
-- [ ] **Smart Find** - Highlight matches, jump between results
+- [x] ~~**CLI Launcher**~~ ✅ DONE - `aperture file.txt`, `aperture ~/projects`
+- [x] ~~**Smart Find**~~ ✅ DONE - Highlight matches, jump between results
 - [x] ~~**Syntax Highlighting**~~ ✅ DONE - Using Shiki for 20+ languages
 - [x] ~~**Line Numbers**~~ ✅ DONE - Shows line numbers in editor
 - [x] ~~**Git Status in Sidebar**~~ ✅ DONE - Show modified/untracked files
