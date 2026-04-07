@@ -8,6 +8,7 @@
 	import FindInFile from '$lib/FindInFile.svelte';
 	import ZoxideJump from '$lib/ZoxideJump.svelte';
 	import { invoke } from '@tauri-apps/api/core';
+	import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 	let currentPath = $state('');
 	let tabs = $state<Array<{ path: string; content: string; dirty: boolean; name: string }>>([]);
@@ -20,8 +21,58 @@
 
 	onMount(() => {
 		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
+		
+		// Listen for CLI arguments
+		const appWindow = getCurrentWebviewWindow();
+		const unlisten = appWindow.listen<string[]>('cli-args', async (event) => {
+			const args = event.payload;
+			for (const arg of args) {
+				await openFileFromCLI(arg);
+			}
+		});
+		
+		return () => {
+			window.removeEventListener('keydown', handleKeyDown);
+			unlisten.then(fn => fn());
+		};
 	});
+
+	async function openFileFromCLI(pathArg: string) {
+		try {
+			// Resolve to absolute path
+			const absolutePath: string = await invoke('resolve_path', { path: pathArg });
+			
+			// Check if it's a directory
+			const homeDir: string = await invoke('get_home_dir');
+			try {
+				const files = await invoke('read_dir', { path: absolutePath });
+				// It's a directory - navigate to it
+				currentPath = absolutePath;
+				if (sidebarComponent) {
+					sidebarComponent.loadDirectory(absolutePath);
+				}
+			} catch {
+				// It's a file - try to open it
+				try {
+					const content: string = await invoke('read_file', { path: absolutePath });
+					const name = absolutePath.split('/').pop() || 'untitled';
+					
+					// Check if already open
+					const existingIndex = tabs.findIndex(t => t.path === absolutePath);
+					if (existingIndex !== -1) {
+						activeTabIndex = existingIndex;
+					} else {
+						tabs = [...tabs, { path: absolutePath, content, dirty: false, name }];
+						activeTabIndex = tabs.length - 1;
+					}
+				} catch (e) {
+					console.error('Failed to open file from CLI:', pathArg, e);
+				}
+			}
+		} catch (e) {
+			console.error('Failed to resolve path:', pathArg, e);
+		}
+	}
 
 	function handleKeyDown(e: KeyboardEvent) {
 		// Ctrl+K for quick open

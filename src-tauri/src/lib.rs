@@ -1,6 +1,7 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use std::fs;
 use serde::Serialize;
+use tauri::{Emitter, Manager};
 
 #[derive(Serialize)]
 struct FileEntry {
@@ -221,10 +222,48 @@ fn zoxide_query(query: String) -> Result<Vec<String>, String> {
     Err("No z tool found (tried zoxide and zshz)".to_string())
 }
 
+#[tauri::command]
+fn resolve_path(path: String) -> Result<String, String> {
+    use std::path::PathBuf;
+    use std::env;
+    
+    let path_buf = PathBuf::from(&path);
+    
+    // If already absolute, return as-is
+    if path_buf.is_absolute() {
+        return Ok(path_buf.to_string_lossy().to_string());
+    }
+    
+    // Otherwise, resolve relative to current directory
+    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+    let absolute = current_dir.join(&path);
+    
+    // Canonicalize to resolve .. and . 
+    match absolute.canonicalize() {
+        Ok(canonical) => Ok(canonical.to_string_lossy().to_string()),
+        Err(_) => Ok(absolute.to_string_lossy().to_string()) // Return non-canonical if file doesn't exist yet
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Capture command-line arguments
+            let args: Vec<String> = std::env::args().collect();
+            
+            // Skip the first arg (executable path)
+            let file_args: Vec<String> = args.into_iter().skip(1).collect();
+            
+            // If there are file arguments, emit them to the frontend
+            if !file_args.is_empty() {
+                let window = app.get_webview_window("main").unwrap();
+                window.emit("cli-args", file_args).unwrap();
+            }
+            
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             read_file,
             write_file,
@@ -233,7 +272,8 @@ pub fn run() {
             git_status,
             quick_open,
             get_home_dir,
-            zoxide_query
+            zoxide_query,
+            resolve_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
