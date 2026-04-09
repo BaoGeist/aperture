@@ -35,10 +35,10 @@
 		
 		// Listen for CLI arguments
 		const appWindow = getCurrentWebviewWindow();
-		const unlisten = appWindow.listen<string[]>('cli-args', async (event) => {
-			const args = event.payload;
+		const unlisten = appWindow.listen<{args: string[], cwd: string}>('cli-args', async (event) => {
+			const { args, cwd } = event.payload;
 			for (const arg of args) {
-				await openFileFromCLI(arg);
+				await openFileFromCLI(arg, cwd);
 			}
 		});
 		
@@ -48,10 +48,10 @@
 		};
 	});
 
-	async function openFileFromCLI(pathArg: string) {
+	async function openFileFromCLI(pathArg: string, cwd: string) {
 		try {
-			// Resolve to absolute path
-			const absolutePath: string = await invoke('resolve_path', { path: pathArg });
+			// Resolve to absolute path using the CWD from when the command was run
+			const absolutePath: string = await invoke('resolve_path', { path: pathArg, cwd });
 			
 			// Check if it's a directory
 			const homeDir: string = await invoke('get_home_dir');

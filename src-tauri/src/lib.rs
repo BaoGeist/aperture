@@ -223,9 +223,8 @@ fn zoxide_query(query: String) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-fn resolve_path(path: String) -> Result<String, String> {
+fn resolve_path(path: String, cwd: Option<String>) -> Result<String, String> {
     use std::path::PathBuf;
-    use std::env;
     
     let path_buf = PathBuf::from(&path);
     
@@ -234,9 +233,14 @@ fn resolve_path(path: String) -> Result<String, String> {
         return Ok(path_buf.to_string_lossy().to_string());
     }
     
-    // Otherwise, resolve relative to current directory
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
-    let absolute = current_dir.join(&path);
+    // Use provided CWD or fall back to env current_dir
+    let base_dir = if let Some(cwd_str) = cwd {
+        PathBuf::from(cwd_str)
+    } else {
+        std::env::current_dir().map_err(|e| e.to_string())?
+    };
+    
+    let absolute = base_dir.join(&path);
     
     // Canonicalize to resolve .. and . 
     match absolute.canonicalize() {
@@ -250,16 +254,33 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            // Capture the actual current working directory before anything changes
+            let cwd = std::env::current_dir()
+                .ok()
+                .and_then(|p| p.to_str().map(String::from))
+                .unwrap_or_else(|| String::from("/"));
+            
             // Capture command-line arguments
             let args: Vec<String> = std::env::args().collect();
             
             // Skip the first arg (executable path)
             let file_args: Vec<String> = args.into_iter().skip(1).collect();
             
-            // If there are file arguments, emit them to the frontend
+            // If there are file arguments, emit them to the frontend with CWD
             if !file_args.is_empty() {
                 let window = app.get_webview_window("main").unwrap();
-                window.emit("cli-args", file_args).unwrap();
+                
+                // Create payload with both args and cwd
+                #[derive(Clone, serde::Serialize)]
+                struct CliPayload {
+                    args: Vec<String>,
+                    cwd: String,
+                }
+                
+                window.emit("cli-args", CliPayload {
+                    args: file_args,
+                    cwd,
+                }).unwrap();
             }
             
             Ok(())

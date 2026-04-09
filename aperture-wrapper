@@ -1,0 +1,27 @@
+#!/bin/bash
+# aperture CLI wrapper - launches editor and detaches from terminal
+
+# Get the directory of this script
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APERTURE_BIN="$SCRIPT_DIR/src-tauri/target/release/aperture"
+
+# Check if binary exists
+if [ ! -f "$APERTURE_BIN" ]; then
+    echo "Error: aperture binary not found at $APERTURE_BIN"
+    echo "Build it with: pnpm tauri build --no-bundle"
+    exit 1
+fi
+
+# Launch aperture in background, detached from terminal
+# Redirect stdout/stderr to /dev/null to prevent output
+nohup "$APERTURE_BIN" "$@" > /dev/null 2>&1 &
+
+# Get the PID of the background process
+APERTURE_PID=$!
+
+# Print success message
+if [ $# -eq 0 ]; then
+    echo "✓ aperture opened (PID: $APERTURE_PID)"
+else
+    echo "✓ aperture opened: $@ (PID: $APERTURE_PID)"
+fi
