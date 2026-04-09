@@ -34,6 +34,10 @@
 			<button class="tab-close" onclick={(e) => closeTab(index, e)}>×</button>
 		</div>
 	{/each}
+	
+	<button class="new-file-btn" onclick={() => dispatch('newFile')} title="New File (Ctrl+N)">
+		+
+	</button>
 </div>
 
 <style>
@@ -108,5 +112,27 @@
 	.tab-close:hover {
 		background: var(--beige-400);
 		opacity: 1;
+	}
+
+	.new-file-btn {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		font-weight: 300;
+		color: var(--text-tertiary);
+		background: var(--bg-secondary);
+		border: none;
+		border-left: 1px solid var(--border);
+		transition: all 0.15s;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+
+	.new-file-btn:hover {
+		background: var(--bg-hover);
+		color: var(--text-primary);
 	}
 </style>

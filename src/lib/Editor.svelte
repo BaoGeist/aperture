@@ -2,7 +2,7 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { createHighlighter, type Highlighter } from 'shiki';
 
-	let { content = $bindable(''), filePath = '' } = $props<{ content: string; filePath?: string }>();
+	let { content = $bindable(''), filePath = '', fontSize = 14 } = $props<{ content: string; filePath?: string; fontSize?: number }>();
 
 	const dispatch = createEventDispatcher();
 	let textarea: HTMLTextAreaElement;
@@ -138,7 +138,7 @@
 	);
 </script>
 
-<div class="editor-container">
+<div class="editor-container" style="--editor-font-size: {fontSize}px;">
 	<div class="line-numbers">
 		{#each lineNumbers as num}
 			<div class="line-number">{num}</div>
@@ -179,7 +179,7 @@
 		padding: 16px 8px 16px 4px;
 		text-align: right;
 		font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-		font-size: 14px;
+		font-size: var(--editor-font-size, 14px);
 		line-height: 1.6;
 		color: var(--text-tertiary);
 		user-select: none;
@@ -205,7 +205,7 @@
 		padding: 16px;
 		pointer-events: none;
 		font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-		font-size: 14px;
+		font-size: var(--editor-font-size, 14px);
 		line-height: 1.6;
 		white-space: pre-wrap;
 		word-wrap: break-word;
@@ -238,7 +238,7 @@
 		background: transparent;
 		color: var(--text-primary);
 		font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-		font-size: 14px;
+		font-size: var(--editor-font-size, 14px);
 		line-height: 1.6;
 		resize: none;
 		border: none;

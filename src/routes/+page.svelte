@@ -19,8 +19,18 @@
 	let gitBranch = $state('');
 	let sidebarComponent: any;
 	let editorComponent: any;
-
+	
+	// Font size state (14px default)
+	let fontSize = $state(14);
+	
+	// Load fontSize from localStorage
 	onMount(() => {
+		// Load saved font size
+		const savedFontSize = localStorage.getItem('aperture-font-size');
+		if (savedFontSize) {
+			fontSize = parseInt(savedFontSize, 10);
+		}
+		
 		window.addEventListener('keydown', handleKeyDown);
 		
 		// Listen for CLI arguments
@@ -103,8 +113,64 @@
 				closeTab(activeTabIndex);
 			}
 		}
-		// Ctrl+A for select all - let browser handle it naturally
-		// (no preventDefault, just allow it to work)
+		// Ctrl+Z for undo and Ctrl+Shift+Z for redo - native browser support
+		// (no preventDefault needed - let textarea handle it)
+		// Ctrl+A for select all - native browser support
+		// (no preventDefault needed - let it work naturally)
+		
+		// Font size controls
+		if (e.ctrlKey && (e.key === '=' || e.key === '+')) {
+			e.preventDefault();
+			increaseFontSize();
+		}
+		if (e.ctrlKey && (e.key === '-' || e.key === '_')) {
+			e.preventDefault();
+			decreaseFontSize();
+		}
+		if (e.ctrlKey && e.key === '0') {
+			e.preventDefault();
+			resetFontSize();
+		}
+		
+		// New file
+		if (e.ctrlKey && e.key === 'n') {
+			e.preventDefault();
+			createNewFile();
+		}
+	}
+
+	function increaseFontSize() {
+		if (fontSize < 32) {
+			fontSize += 2;
+			saveFontSize();
+		}
+	}
+
+	function decreaseFontSize() {
+		if (fontSize > 8) {
+			fontSize -= 2;
+			saveFontSize();
+		}
+	}
+
+	function resetFontSize() {
+		fontSize = 14;
+		saveFontSize();
+	}
+
+	function saveFontSize() {
+		localStorage.setItem('aperture-font-size', fontSize.toString());
+	}
+
+	let untitledCounter = 1;
+
+	function createNewFile() {
+		const name = `Untitled-${untitledCounter}`;
+		const path = `untitled-${untitledCounter}`;
+		untitledCounter++;
+		
+		tabs = [...tabs, { path, content: '', dirty: false, name }];
+		activeTabIndex = tabs.length - 1;
 	}
 
 	function openFile(event: CustomEvent) {
@@ -190,6 +256,7 @@
 			bind:activeTabIndex={activeTabIndex}
 			on:selectTab={selectTab}
 			on:closeTab={(e) => closeTab(e.detail)}
+			on:newFile={createNewFile}
 		/>
 		
 		{#if tabs.length > 0}
@@ -197,6 +264,7 @@
 				bind:this={editorComponent}
 				bind:content={tabs[activeTabIndex].content}
 				filePath={tabs[activeTabIndex].path}
+				fontSize={fontSize}
 				on:change={updateTabContent}
 			/>
 		{:else}
@@ -205,11 +273,12 @@
 					<h1>aperture</h1>
 					<p>Open a file from the sidebar or use keyboard shortcuts:</p>
 					<div class="shortcuts">
+						<div><kbd>Ctrl+N</kbd> New file</div>
 						<div><kbd>Ctrl+K</kbd> Quick open</div>
 						<div><kbd>Ctrl+O</kbd> Jump to directory (zoxide)</div>
 						<div><kbd>Ctrl+F</kbd> Find in file</div>
 						<div><kbd>Ctrl+S</kbd> Save</div>
-						<div><kbd>Ctrl+A</kbd> Select all</div>
+						<div><kbd>Ctrl++/-/0</kbd> Font size</div>
 					</div>
 				</div>
 			</div>

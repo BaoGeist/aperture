@@ -75,6 +75,12 @@ All use `Ctrl` (Linux-friendly):
 | `Ctrl+S` | Save current file |
 | `Ctrl+W` | Close current tab |
 | `Ctrl+A` | Select all text |
+| `Ctrl+N` | New file |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Shift+Z` | Redo |
+| `Ctrl++` | Increase font size |
+| `Ctrl+-` | Decrease font size |
+| `Ctrl+0` | Reset font size |
 
 ---
 

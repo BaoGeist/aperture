@@ -31,9 +31,10 @@
 - [ ] **Smart Indent** - Auto-indent based on file type
 - [ ] **Bracket Auto-Close** - Auto-close `{}`, `[]`, `()`, `""`
 - [ ] **Word Wrap Toggle** - Enable/disable line wrapping
-- [ ] **Undo/Redo** - `Ctrl+Z` / `Ctrl+Shift+Z`
+- [x] ~~**Undo/Redo**~~ ✅ DONE - `Ctrl+Z` / `Ctrl+Shift+Z` (native browser support)
 - [x] ~~**Select All**~~ ✅ DONE - `Ctrl+A` (native browser support)
-- [ ] **Font Size Controls** - `Ctrl++`, `Ctrl+-`, `Ctrl+0`
+- [x] ~~**Font Size Controls**~~ ✅ DONE - `Ctrl++`, `Ctrl+-`, `Ctrl+0`
+- [x] ~~**New File Button**~~ ✅ DONE - Create untitled files with `Ctrl+N` or + button
 
 ### Low Priority
 - [ ] **Markdown Enhancements** - Bold headers, styled blockquotes
