@@ -11,6 +11,7 @@
 	import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
 	let currentPath = $state('');
+	let initialSidebarPath = $state(''); // Set by CLI args before Sidebar mounts
 	let tabs = $state<Array<{ path: string; content: string; dirty: boolean; name: string }>>([]);
 	let activeTabIndex = $state(0);
 	let showQuickOpen = $state(false);
@@ -23,6 +24,9 @@
 	// Font size state (14px default)
 	let fontSize = $state(14);
 	
+	// Track if components are ready
+	let componentsReady = $state(false);
+	
 	// Load fontSize from localStorage
 	onMount(() => {
 		// Load saved font size
@@ -33,10 +37,57 @@
 		
 		window.addEventListener('keydown', handleKeyDown);
 		
+		// Mark components as ready after a short delay
+		setTimeout(() => {
+			componentsReady = true;
+			console.log('DEBUG: Components ready');
+		}, 100);
+		
 		// Listen for CLI arguments
 		const appWindow = getCurrentWebviewWindow();
 		const unlisten = appWindow.listen<{args: string[], cwd: string}>('cli-args', async (event) => {
 			const { args, cwd } = event.payload;
+			console.log('DEBUG: Received cli-args:', { args, cwd, componentsReady });
+			
+			// Process first arg to determine if it's a directory
+			if (args.length > 0) {
+				try {
+					const absolutePath: string = await invoke('resolve_path', { path: args[0], cwd });
+					console.log('DEBUG: Resolved to:', absolutePath);
+					
+					// Try to check if it's a directory
+					try {
+						await invoke('read_dir', { path: absolutePath });
+						// It's a directory - set as initial sidebar path
+						console.log('DEBUG: Setting initial sidebar path:', absolutePath);
+						initialSidebarPath = absolutePath;
+						
+						// If sidebar is already mounted, reload it
+						if (sidebarComponent) {
+							sidebarComponent.loadDirectory(absolutePath);
+						}
+						return; // Don't process other args yet
+					} catch {
+						// It's a file, continue to normal processing
+					}
+				} catch (e) {
+					console.error('Failed to process CLI arg:', e);
+				}
+			}
+			
+			// Wait for components to be ready for file opening
+			let attempts = 0;
+			while (!componentsReady && attempts < 50) {
+				console.log('DEBUG: Waiting for components...');
+				await new Promise(resolve => setTimeout(resolve, 100));
+				attempts++;
+			}
+			
+			if (!componentsReady) {
+				console.error('DEBUG: Components never became ready');
+				return;
+			}
+			
 			for (const arg of args) {
 				await openFileFromCLI(arg, cwd);
 			}
@@ -50,17 +101,24 @@
 
 	async function openFileFromCLI(pathArg: string, cwd: string) {
 		try {
+			console.log('DEBUG openFileFromCLI:', { pathArg, cwd });
 			// Resolve to absolute path using the CWD from when the command was run
 			const absolutePath: string = await invoke('resolve_path', { path: pathArg, cwd });
+			console.log('DEBUG: Resolved to:', absolutePath);
 			
 			// Check if it's a directory
 			const homeDir: string = await invoke('get_home_dir');
 			try {
 				const files = await invoke('read_dir', { path: absolutePath });
 				// It's a directory - navigate to it
+				console.log('DEBUG: Is directory, navigating to:', absolutePath);
+				console.log('DEBUG: sidebarComponent exists?', !!sidebarComponent);
 				currentPath = absolutePath;
 				if (sidebarComponent) {
+					console.log('DEBUG: Calling loadDirectory');
 					sidebarComponent.loadDirectory(absolutePath);
+				} else {
+					console.error('DEBUG: sidebarComponent not available!');
 				}
 			} catch {
 				// It's a file - try to open it
@@ -245,6 +303,7 @@
 <div class="app">
 	<Sidebar 
 		bind:this={sidebarComponent}
+		initialPath={initialSidebarPath}
 		on:openFile={openFile}
 		on:pathChange={setCurrentPath}
 		on:branchChange={setBranch}

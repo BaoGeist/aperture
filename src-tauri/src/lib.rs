@@ -226,26 +226,40 @@ fn zoxide_query(query: String) -> Result<Vec<String>, String> {
 fn resolve_path(path: String, cwd: Option<String>) -> Result<String, String> {
     use std::path::PathBuf;
     
+    eprintln!("DEBUG resolve_path: path={}, cwd={:?}", path, cwd);
+    
     let path_buf = PathBuf::from(&path);
     
     // If already absolute, return as-is
     if path_buf.is_absolute() {
+        eprintln!("DEBUG: Path is absolute, returning: {}", path);
         return Ok(path_buf.to_string_lossy().to_string());
     }
     
     // Use provided CWD or fall back to env current_dir
     let base_dir = if let Some(cwd_str) = cwd {
+        eprintln!("DEBUG: Using provided CWD: {}", cwd_str);
         PathBuf::from(cwd_str)
     } else {
-        std::env::current_dir().map_err(|e| e.to_string())?
+        let curr = std::env::current_dir().map_err(|e| e.to_string())?;
+        eprintln!("DEBUG: Using env current_dir: {}", curr.display());
+        curr
     };
     
     let absolute = base_dir.join(&path);
+    eprintln!("DEBUG: Joined path: {}", absolute.display());
     
     // Canonicalize to resolve .. and . 
     match absolute.canonicalize() {
-        Ok(canonical) => Ok(canonical.to_string_lossy().to_string()),
-        Err(_) => Ok(absolute.to_string_lossy().to_string()) // Return non-canonical if file doesn't exist yet
+        Ok(canonical) => {
+            let result = canonical.to_string_lossy().to_string();
+            eprintln!("DEBUG: Canonicalized to: {}", result);
+            Ok(result)
+        },
+        Err(e) => {
+            eprintln!("DEBUG: Canonicalize failed: {}, using non-canonical", e);
+            Ok(absolute.to_string_lossy().to_string())
+        }
     }
 }
 
@@ -260,27 +274,43 @@ pub fn run() {
                 .and_then(|p| p.to_str().map(String::from))
                 .unwrap_or_else(|| String::from("/"));
             
+            eprintln!("DEBUG: Captured CWD: {}", cwd);
+            
             // Capture command-line arguments
             let args: Vec<String> = std::env::args().collect();
+            eprintln!("DEBUG: Args: {:?}", args);
             
             // Skip the first arg (executable path)
             let file_args: Vec<String> = args.into_iter().skip(1).collect();
             
             // If there are file arguments, emit them to the frontend with CWD
             if !file_args.is_empty() {
-                let window = app.get_webview_window("main").unwrap();
+                eprintln!("DEBUG: Emitting file_args: {:?} with cwd: {}", file_args, cwd);
                 
-                // Create payload with both args and cwd
-                #[derive(Clone, serde::Serialize)]
-                struct CliPayload {
-                    args: Vec<String>,
-                    cwd: String,
-                }
+                // Clone for the async block
+                let file_args_clone = file_args.clone();
+                let cwd_clone = cwd.clone();
+                let app_handle = app.handle().clone();
                 
-                window.emit("cli-args", CliPayload {
-                    args: file_args,
-                    cwd,
-                }).unwrap();
+                // Wait for window to be ready before emitting
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        // Create payload with both args and cwd
+                        #[derive(Clone, serde::Serialize)]
+                        struct CliPayload {
+                            args: Vec<String>,
+                            cwd: String,
+                        }
+                        
+                        eprintln!("DEBUG: Emitting after delay");
+                        window.emit("cli-args", CliPayload {
+                            args: file_args_clone,
+                            cwd: cwd_clone,
+                        }).unwrap();
+                    }
+                });
             }
             
             Ok(())

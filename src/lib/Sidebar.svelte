@@ -2,6 +2,8 @@
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
 
+	let { initialPath = '' } = $props<{ initialPath?: string }>();
+
 	const dispatch = createEventDispatcher();
 
 	interface FileEntry {
@@ -23,10 +25,11 @@
 	let gitStatuses = $state<Map<string, string>>(new Map());
 
 	onMount(async () => {
-		currentPath = await getHomePath();
-		await loadDirectory(currentPath);
-		await checkGitStatus(currentPath);
-		checkGitBranch(currentPath);
+		const startPath = initialPath || await getHomePath();
+		currentPath = startPath;
+		await loadDirectory(startPath);
+		await checkGitStatus(startPath);
+		checkGitBranch(startPath);
 	});
 
 	async function getHomePath(): Promise<string> {
