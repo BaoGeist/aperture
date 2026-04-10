@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import TitleBar from '$lib/TitleBar.svelte';
 	import Sidebar from '$lib/Sidebar.svelte';
 	import TabBar from '$lib/TabBar.svelte';
 	import Editor from '$lib/Editor.svelte';
@@ -288,6 +289,8 @@
 	}
 </script>
 
+<TitleBar />
+
 <div class="app">
 	<Sidebar 
 		bind:this={sidebarComponent}
@@ -362,13 +365,16 @@
 <style>
 	:global(body) {
 		position: relative;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
 	}
 
 	.app {
 		display: flex;
 		flex-direction: row;
 		width: 100%;
-		height: 100vh;
+		height: calc(100vh - 32px);
 		overflow: hidden;
 	}
 

@@ -197,7 +197,11 @@
 
 <aside class="sidebar">
 	<div class="sidebar-header">
-		<button class="nav-up" onclick={navigateUp} title="Go up">↑</button>
+		<button class="nav-up" onclick={navigateUp} title="Go up one level">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M8 3L3 8H6V13H10V8H13L8 3Z" fill="currentColor"/>
+			</svg>
+		</button>
 		<div class="current-path" title={currentPath}>
 			{currentPath.split('/').pop() || '/'}
 		</div>
@@ -214,9 +218,21 @@
 			>
 				<span class="file-icon">
 					{#if file.is_dir}
-						{file.expanded ? '▼' : '▶'}
+						<svg 
+							width="12" 
+							height="12" 
+							viewBox="0 0 16 16" 
+							fill="none" 
+							xmlns="http://www.w3.org/2000/svg"
+							class="chevron"
+							class:expanded={file.expanded}
+						>
+							<path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+						</svg>
 					{:else}
-						·
+						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="8" cy="8" r="2" fill="currentColor"/>
+						</svg>
 					{/if}
 				</span>
 				<span class="file-name">{file.name}</span>
@@ -306,11 +322,22 @@
 	}
 
 	.file-icon {
-		font-size: 10px;
 		color: var(--text-tertiary);
 		width: 12px;
-		text-align: center;
+		height: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		flex-shrink: 0;
+	}
+
+	.chevron {
+		transition: transform 0.2s ease;
+		transform: rotate(0deg);
+	}
+
+	.chevron.expanded {
+		transform: rotate(90deg);
 	}
 
 	.file-name {
