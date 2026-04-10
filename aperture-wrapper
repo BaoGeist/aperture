@@ -13,12 +13,15 @@ if [ ! -f "$APERTURE_BIN" ]; then
 fi
 
 # Launch aperture in background, detached from terminal
-# Redirect all output to /dev/null for clean terminal
+# Redirect stderr immediately to suppress libEGL warnings
 cd "$(pwd)"
-nohup "$APERTURE_BIN" "$@" > /dev/null 2>&1 &
+"$APERTURE_BIN" "$@" > /dev/null 2>&1 &
 
 # Get the PID of the background process
 APERTURE_PID=$!
+
+# Disown the process to fully detach it
+disown
 
 # Print success message
 if [ $# -eq 0 ]; then
