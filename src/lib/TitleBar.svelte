@@ -1,18 +1,26 @@
 <script lang="ts">
 	import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
+	import { onMount } from 'svelte';
 
-	const appWindow = getCurrentWebviewWindow();
+	let appWindow: any;
 
-	async function minimize() {
-		await appWindow.minimize();
+	onMount(() => {
+		appWindow = getCurrentWebviewWindow();
+	});
+
+	function minimize() {
+		if (!appWindow) return;
+		appWindow.minimize().catch((err: any) => console.error('Minimize failed:', err));
 	}
 
-	async function toggleMaximize() {
-		await appWindow.toggleMaximize();
+	function toggleMaximize() {
+		if (!appWindow) return;
+		appWindow.toggleMaximize().catch((err: any) => console.error('Toggle maximize failed:', err));
 	}
 
-	async function close() {
-		await appWindow.close();
+	function close() {
+		if (!appWindow) return;
+		appWindow.close().catch((err: any) => console.error('Close failed:', err));
 	}
 </script>
 
@@ -22,19 +30,19 @@
 	</div>
 	
 	<div class="titlebar-controls">
-		<button class="titlebar-button" onclick={minimize} title="Minimize">
+		<button class="titlebar-button" on:click={minimize} type="button" title="Minimize">
 			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<rect x="2" y="5.5" width="8" height="1" fill="currentColor"/>
 			</svg>
 		</button>
 		
-		<button class="titlebar-button" onclick={toggleMaximize} title="Maximize">
+		<button class="titlebar-button" on:click={toggleMaximize} type="button" title="Maximize">
 			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<rect x="2" y="2" width="8" height="8" stroke="currentColor" stroke-width="1" fill="none"/>
 			</svg>
 		</button>
 		
-		<button class="titlebar-button close" onclick={close} title="Close">
+		<button class="titlebar-button close" on:click={close} type="button" title="Close">
 			<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<path d="M2 2L10 10M10 2L2 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
 			</svg>
@@ -79,6 +87,10 @@
 		transition: all 0.15s;
 		cursor: pointer;
 		padding: 0;
+	}
+
+	.titlebar-button svg {
+		pointer-events: none;
 	}
 
 	.titlebar-button:hover {
