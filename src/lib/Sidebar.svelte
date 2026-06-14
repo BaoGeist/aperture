@@ -140,10 +140,10 @@
 		if (!status) return '';
 		
 		switch (status) {
-			case 'modified': return 'var(--beige-600)'; // Orange-ish
-			case 'untracked': return 'var(--beige-500)'; // Yellow-ish
-			case 'added': return 'var(--beige-500)';
-			case 'deleted': return 'var(--beige-800)'; // Red-ish
+			case 'modified': return 'var(--git-modified)';
+			case 'untracked': return 'var(--git-added)';
+			case 'added': return 'var(--git-added)';
+			case 'deleted': return 'var(--git-deleted)';
 			default: return '';
 		}
 	}
@@ -161,16 +161,79 @@
 		}
 	}
 
+	const STATUS_PRIORITY: Record<string, number> = {
+		'deleted': 0,
+		'modified': 1,
+		'added': 2,
+		'untracked': 3
+	};
+
+	function getFolderGitStatus(folderPath: string): { color: string; icon: string; count: number } | null {
+		let worstStatus = '';
+		let worstPriority = Infinity;
+		let count = 0;
+		const prefix = folderPath.endsWith('/') ? folderPath : folderPath + '/';
+
+		for (const [filePath, status] of gitStatuses) {
+			if (filePath.startsWith(prefix) || filePath === folderPath) {
+				count++;
+				const priority = STATUS_PRIORITY[status] ?? 99;
+				if (priority < worstPriority) {
+					worstPriority = priority;
+					worstStatus = status;
+				}
+			}
+		}
+
+		if (count === 0) return null;
+
+		let color = '';
+		let icon = '';
+		switch (worstStatus) {
+			case 'deleted':
+				color = 'var(--git-deleted)';
+				icon = 'D';
+				break;
+			case 'modified':
+				color = 'var(--git-modified)';
+				icon = 'M';
+				break;
+			case 'added':
+				color = 'var(--git-added)';
+				icon = 'A';
+				break;
+			case 'untracked':
+				color = 'var(--git-added)';
+				icon = 'U';
+				break;
+		}
+
+		return { color, icon, count };
+	}
+
 	function renderFileTree(files: FileEntry[], depth: number = 0): any {
 		return files.map(file => {
-			const statusColor = getGitStatusColor(file.path);
-			const statusIcon = getGitStatusIcon(file.path);
-			
+			let statusColor = '';
+			let statusIcon = '';
+			let folderStatus: { color: string; icon: string; count: number } | null = null;
+
+			if (file.is_dir) {
+				folderStatus = getFolderGitStatus(file.path);
+				if (folderStatus) {
+					statusColor = folderStatus.color;
+					statusIcon = folderStatus.icon;
+				}
+			} else {
+				statusColor = getGitStatusColor(file.path);
+				statusIcon = getGitStatusIcon(file.path);
+			}
+
 			return {
 				file,
 				depth,
 				statusColor,
 				statusIcon,
+				folderStatus,
 				children: file.expanded && file.children ? renderFileTree(file.children, depth + 1) : []
 			};
 		});
@@ -208,41 +271,45 @@
 	</div>
 
 	<div class="file-list">
-		{#each fileTreeItems as { file, depth, statusColor, statusIcon }}
-			<button
-				class="file-item"
-				class:is-dir={file.is_dir}
-				style="padding-left: {8 + depth * 16}px"
-				onclick={() => handleFileClick(file)}
-				ondblclick={() => handleFileDoubleClick(file)}
-			>
-				<span class="file-icon">
-					{#if file.is_dir}
-						<svg 
-							width="12" 
-							height="12" 
-							viewBox="0 0 16 16" 
-							fill="none" 
-							xmlns="http://www.w3.org/2000/svg"
-							class="chevron"
-							class:expanded={file.expanded}
-						>
-							<path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-						</svg>
+	{#each fileTreeItems as { file, depth, statusColor, statusIcon, folderStatus }}
+		<button
+			class="file-item"
+			class:is-dir={file.is_dir}
+			style="padding-left: {8 + depth * 16}px"
+			onclick={() => handleFileClick(file)}
+			ondblclick={() => handleFileDoubleClick(file)}
+		>
+			<span class="file-icon">
+				{#if file.is_dir}
+					<svg 
+						width="12" 
+						height="12" 
+						viewBox="0 0 16 16" 
+						fill="none" 
+						xmlns="http://www.w3.org/2000/svg"
+						class="chevron"
+						class:expanded={file.expanded}
+					>
+						<path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				{:else}
+					<svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<circle cx="8" cy="8" r="2" fill="currentColor"/>
+					</svg>
+				{/if}
+			</span>
+			<span class="file-name" style={statusColor ? `color: ${statusColor}` : ''}>{file.name}</span>
+			{#if statusIcon}
+				<span class="git-status" style="color: {statusColor}" title={folderStatus ? `${folderStatus.count} changed` : statusIcon}>
+					{#if folderStatus && folderStatus.count > 1}
+						{folderStatus.count}
 					{:else}
-						<svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<circle cx="8" cy="8" r="2" fill="currentColor"/>
-						</svg>
+						{statusIcon}
 					{/if}
 				</span>
-				<span class="file-name">{file.name}</span>
-				{#if statusIcon}
-					<span class="git-status" style="color: {statusColor}" title={statusIcon}>
-						{statusIcon}
-					</span>
-				{/if}
-			</button>
-		{/each}
+			{/if}
+		</button>
+	{/each}
 	</div>
 </aside>
 
