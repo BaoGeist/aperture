@@ -363,7 +363,6 @@
 				<div class="empty-content">
 					<img src="/aperture.png" alt="Aperture" class="logo" />
 					<h1>aperture</h1>
-					<p>Open a file from the sidebar or use keyboard shortcuts:</p>
 					<div class="shortcuts">
 						<div><kbd>Ctrl+N</kbd> New file</div>
 						<div><kbd>Ctrl+K</kbd> Quick open</div>
@@ -445,22 +444,16 @@
 	.logo {
 		width: 80px;
 		height: 80px;
-		margin-bottom: 16px;
+		margin-bottom: 8px;
 		opacity: 0.8;
 	}
 
 	.empty-content h1 {
-		font-size: 48px;
+		font-size: 64px;
 		font-weight: 300;
 		letter-spacing: -0.5px;
 		color: var(--beige-400);
-		margin-bottom: 16px;
-	}
-
-	.empty-content p {
-		font-size: 14px;
-		color: var(--text-tertiary);
-		margin-bottom: 16px;
+		margin-bottom: 24px;
 	}
 
 	.shortcuts {
