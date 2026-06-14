@@ -330,7 +330,7 @@
 <TitleBar />
 
 <div class="app">
-	{#if sidebarVisible}
+	<div class:hidden={!sidebarVisible}>
 		<Sidebar 
 			bind:this={sidebarComponent}
 			initialPath={initialSidebarPath}
@@ -338,7 +338,7 @@
 			on:pathChange={setCurrentPath}
 			on:branchChange={setBranch}
 		/>
-	{/if}
+	</div>
 	
 	<div class="main">
 		<TabBar 
@@ -417,6 +417,10 @@
 		width: 100%;
 		height: calc(100vh - 32px);
 		overflow: hidden;
+	}
+
+	.hidden {
+		display: none;
 	}
 
 	.main {
