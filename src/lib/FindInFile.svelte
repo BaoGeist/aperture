@@ -171,6 +171,11 @@
 		font-size: 13px;
 		border: none;
 		background: transparent;
+		outline: none;
+	}
+
+	.find-input:focus {
+		outline: none;
 	}
 
 	.match-count {

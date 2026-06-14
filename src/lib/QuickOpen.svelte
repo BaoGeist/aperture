@@ -180,6 +180,12 @@
 		border-left: none;
 		border-right: none;
 		border-top: none;
+		outline: none;
+		background: transparent;
+	}
+
+	.search-input:focus {
+		outline: none;
 	}
 
 	.results {
