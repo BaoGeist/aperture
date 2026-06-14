@@ -361,6 +361,7 @@
 		{:else}
 			<div class="empty-state">
 				<div class="empty-content">
+					<img src="/aperture.png" alt="Aperture" class="logo" />
 					<h1>aperture</h1>
 					<p>Open a file from the sidebar or use keyboard shortcuts:</p>
 					<div class="shortcuts">
@@ -439,6 +440,13 @@
 	.empty-content {
 		text-align: center;
 		color: var(--text-secondary);
+	}
+
+	.logo {
+		width: 80px;
+		height: 80px;
+		margin-bottom: 16px;
+		opacity: 0.8;
 	}
 
 	.empty-content h1 {
