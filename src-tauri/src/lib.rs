@@ -17,6 +17,12 @@ struct GitFileStatus {
     status: String, // "modified", "untracked", "deleted", "added"
 }
 
+#[derive(Serialize)]
+struct LineDiff {
+    line: u32,
+    status: String, // "added", "modified", "deleted"
+}
+
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| e.to_string())
@@ -119,6 +125,76 @@ fn git_status(path: String) -> Result<Vec<GitFileStatus>, String> {
     Ok(status_map.into_iter().map(|(path, status)| {
         GitFileStatus { path, status }
     }).collect())
+}
+#[tauri::command]
+fn git_line_diff(path: String, file_path: String) -> Result<Vec<LineDiff>, String> {
+    use std::process::Command;
+    use regex::Regex;
+
+    let output = Command::new("git")
+        .args(&["-C", &path, "diff", "HEAD", "--unified=0", "--", &file_path])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Ok(Vec::new());
+    }
+
+    let diff_text = String::from_utf8_lossy(&output.stdout);
+    let mut results: Vec<LineDiff> = Vec::new();
+
+    // Find all hunk header positions: @@ -old,count +new,count @@
+    let hunk_re = Regex::new(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@").unwrap();
+    let headers: Vec<(usize, usize, u32)> = hunk_re
+        .captures_iter(&diff_text)
+        .map(|cap| {
+            let m = cap.get(0).unwrap();
+            let start_line: u32 = cap[1].parse().unwrap_or(1);
+            // Find the newline after the header (header may have trailing context like " @@ foo")
+            let newline_pos = diff_text[m.end()..].find('\n').map(|p| m.end() + p + 1).unwrap_or(diff_text.len());
+            (m.start(), newline_pos, start_line)
+        })
+        .collect();
+
+    for (i, &(_hdr_start, body_start, start_line)) in headers.iter().enumerate() {
+        // Body ends at next header or end of diff
+        let body_end = if i + 1 < headers.len() {
+            headers[i + 1].0
+        } else {
+            diff_text.len()
+        };
+
+        let hunk_body = &diff_text[body_start..body_end];
+        let mut current_line = start_line;
+        let mut added_lines: Vec<u32> = Vec::new();
+        let mut deleted_count: u32 = 0;
+
+        for line in hunk_body.lines() {
+            if line.starts_with('+') {
+                added_lines.push(current_line);
+                current_line += 1;
+            } else if line.starts_with('-') {
+                deleted_count += 1;
+            } else if !line.is_empty() {
+                current_line += 1;
+            }
+        }
+
+        let status = if deleted_count > 0 {
+            "modified"
+        } else {
+            "added"
+        };
+
+        for line_num in &added_lines {
+            results.push(LineDiff {
+                line: *line_num,
+                status: status.to_string(),
+            });
+        }
+    }
+
+    Ok(results)
 }
 
 #[tauri::command]
@@ -301,6 +377,7 @@ pub fn run() {
             read_dir,
             get_git_branch,
             git_status,
+            git_line_diff,
             quick_open,
             get_home_dir,
             zoxide_query,

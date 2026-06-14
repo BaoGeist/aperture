@@ -21,6 +21,7 @@
 	let gitBranch = $state('');
 	let sidebarComponent: any;
 	let editorComponent: any;
+	let changedLines = $state<Map<number, string>>(new Map());
 	
 	// Font size state (14px default)
 	let fontSize = $state(14);
@@ -115,14 +116,15 @@
 					const content: string = await invoke('read_file', { path: absolutePath });
 					const name = absolutePath.split('/').pop() || 'untitled';
 					
-					// Check if already open
-					const existingIndex = tabs.findIndex(t => t.path === absolutePath);
-					if (existingIndex !== -1) {
-						activeTabIndex = existingIndex;
-					} else {
-						tabs = [...tabs, { path: absolutePath, content, dirty: false, name }];
-						activeTabIndex = tabs.length - 1;
-					}
+				// Check if already open
+				const existingIndex = tabs.findIndex(t => t.path === absolutePath);
+				if (existingIndex !== -1) {
+					activeTabIndex = existingIndex;
+				} else {
+					tabs = [...tabs, { path: absolutePath, content, dirty: false, name }];
+					activeTabIndex = tabs.length - 1;
+				}
+				fetchChangedLines(absolutePath);
 				} catch (e) {
 					console.error('Failed to open file from CLI:', pathArg, e);
 				}
@@ -160,8 +162,8 @@
 				closeTab(activeTabIndex);
 			}
 		}
-		// Ctrl+Z for undo and Ctrl+Shift+Z for redo - native browser support
-		// (no preventDefault needed - let textarea handle it)
+		// Ctrl+Z for undo and Ctrl+Shift+Z for redo - handled by Editor component
+		// (custom undo/redo stack with 500ms debounce)
 		// Ctrl+A for select all - native browser support
 		// (no preventDefault needed - let it work naturally)
 		
@@ -230,6 +232,7 @@
 			tabs = [...tabs, { path, content, dirty: false, name }];
 			activeTabIndex = tabs.length - 1;
 		}
+		fetchChangedLines(path);
 		showQuickOpen = false;
 	}
 
@@ -253,6 +256,7 @@
 			try {
 				await invoke('write_file', { path: tab.path, content: tab.content });
 				tabs[activeTabIndex].dirty = false;
+				fetchChangedLines(tab.path);
 			} catch (e) {
 				console.error('Failed to save:', e);
 			}
@@ -261,6 +265,27 @@
 
 	function selectTab(event: CustomEvent) {
 		activeTabIndex = event.detail;
+		if (tabs[activeTabIndex]) {
+			fetchChangedLines(tabs[activeTabIndex].path);
+		}
+	}
+
+	async function fetchChangedLines(filePath: string) {
+		if (!filePath || filePath.startsWith('untitled-')) {
+			changedLines = new Map();
+			return;
+		}
+		try {
+			const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+			const result: Array<{ line: number; status: string }> = await invoke('git_line_diff', { path: dir, filePath });
+			const map = new Map<number, string>();
+			for (const item of result) {
+				map.set(item.line, item.status);
+			}
+			changedLines = map;
+		} catch {
+			changedLines = new Map();
+		}
 	}
 
 	function setCurrentPath(event: CustomEvent) {
@@ -315,6 +340,7 @@
 				bind:content={tabs[activeTabIndex].content}
 				filePath={tabs[activeTabIndex].path}
 				fontSize={fontSize}
+				changedLines={changedLines}
 				on:change={updateTabContent}
 			/>
 		{:else}

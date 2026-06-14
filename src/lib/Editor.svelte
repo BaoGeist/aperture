@@ -2,13 +2,19 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { createHighlighter, type Highlighter } from 'shiki';
 
-	let { content = $bindable(''), filePath = '', fontSize = 14 } = $props<{ content: string; filePath?: string; fontSize?: number }>();
+	let { content = $bindable(''), filePath = '', fontSize = 14, changedLines = new Map<number, string>() } = $props<{ content: string; filePath?: string; fontSize?: number; changedLines?: Map<number, string> }>();
 
 	const dispatch = createEventDispatcher();
 	let textarea: HTMLTextAreaElement;
 	let highlighter: Highlighter | null = null;
 	let highlightedCode = $state('');
 	let useHighlighting = $state(true);
+	
+	// Undo/Redo state
+	let undoStack: string[] = [];
+	let redoStack: string[] = [];
+	let lastContent = '';
+	let undoTimer: any = null;
 
 	export function scrollToPosition(start: number, end: number) {
 		if (!textarea) return;
@@ -25,6 +31,42 @@
 		const scrollTarget = (lineNumber - 1) * lineHeight - 100; // Offset by 100px for visibility
 		
 		textarea.parentElement!.scrollTop = Math.max(0, scrollTarget);
+	}
+	
+	function pushToUndoStack(value: string) {
+		if (value !== lastContent) {
+			undoStack = [...undoStack, lastContent];
+			// Limit undo stack to 50 items
+			if (undoStack.length > 50) {
+				undoStack = undoStack.slice(-50);
+			}
+			redoStack = []; // Clear redo stack on new change
+			lastContent = value;
+		}
+	}
+	
+	function undo() {
+		if (undoStack.length === 0) return;
+		
+		redoStack = [...redoStack, content];
+		const prevContent = undoStack[undoStack.length - 1];
+		undoStack = undoStack.slice(0, -1);
+		
+		content = prevContent;
+		lastContent = prevContent;
+		dispatch('change', prevContent);
+	}
+	
+	function redo() {
+		if (redoStack.length === 0) return;
+		
+		const nextContent = redoStack[redoStack.length - 1];
+		redoStack = redoStack.slice(0, -1);
+		undoStack = [...undoStack, content];
+		
+		content = nextContent;
+		lastContent = nextContent;
+		dispatch('change', nextContent);
 	}
 
 	// Detect language from file extension
@@ -66,6 +108,11 @@
 		if (textarea) {
 			textarea.focus();
 		}
+		
+		// Initialize undo stack with initial content
+		lastContent = content;
+		undoStack = [];
+		redoStack = [];
 
 		// Initialize Shiki
 		try {
@@ -114,20 +161,46 @@
 	function handleInput(e: Event) {
 		const target = e.target as HTMLTextAreaElement;
 		dispatch('change', target.value);
+		
+		// Debounce undo stack updates (500ms after typing stops)
+		if (undoTimer) clearTimeout(undoTimer);
+		undoTimer = setTimeout(() => {
+			pushToUndoStack(target.value);
+		}, 500);
 	}
 
-	function handleTab(e: KeyboardEvent) {
+	function handleKeyDown(e: KeyboardEvent) {
+		// Handle Tab
 		if (e.key === 'Tab') {
 			e.preventDefault();
 			const target = e.target as HTMLTextAreaElement;
 			const start = target.selectionStart;
 			const end = target.selectionEnd;
+			
+			// Save current state to undo stack before modification
+			pushToUndoStack(content);
+			
 			const newContent = content.substring(0, start) + '  ' + content.substring(end);
 			content = newContent;
 			dispatch('change', newContent);
 			setTimeout(() => {
 				target.selectionStart = target.selectionEnd = start + 2;
 			}, 0);
+			return;
+		}
+		
+		// Handle Ctrl+Z (Undo)
+		if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+			e.preventDefault();
+			undo();
+			return;
+		}
+		
+		// Handle Ctrl+Shift+Z or Ctrl+Y (Redo)
+		if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) {
+			e.preventDefault();
+			redo();
+			return;
 		}
 	}
 
@@ -141,7 +214,9 @@
 <div class="editor-container" style="--editor-font-size: {fontSize}px;">
 	<div class="line-numbers">
 		{#each lineNumbers as num}
-			<div class="line-number">{num}</div>
+			<div class="line-number" class:changed={changedLines.has(num)} class:added={changedLines.get(num) === 'added'} class:modified={changedLines.get(num) === 'modified'}>
+				{num}
+			</div>
 		{/each}
 	</div>
 
@@ -155,7 +230,7 @@
 			bind:this={textarea}
 			bind:value={content}
 			oninput={handleInput}
-			onkeydown={handleTab}
+			onkeydown={handleKeyDown}
 			spellcheck="false"
 			autocomplete="off"
 			class:highlighted={useHighlighting && highlightedCode}
@@ -188,6 +263,25 @@
 
 	.line-number {
 		/* Line height matches textarea */
+		position: relative;
+	}
+
+	.line-number.changed::before {
+		content: '';
+		position: absolute;
+		left: -4px;
+		top: 0;
+		bottom: 0;
+		width: 3px;
+		border-radius: 1px;
+	}
+
+	.line-number.added::before {
+		background: var(--git-added);
+	}
+
+	.line-number.modified::before {
+		background: var(--git-modified);
 	}
 
 	.editor-wrapper {
