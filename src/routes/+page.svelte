@@ -22,6 +22,7 @@
 	let sidebarComponent: any;
 	let editorComponent: any;
 	let changedLines = $state<Map<number, string>>(new Map());
+	let sidebarVisible = $state(true);
 	
 	// Font size state (14px default)
 	let fontSize = $state(14);
@@ -35,6 +36,12 @@
 		const savedFontSize = localStorage.getItem('aperture-font-size');
 		if (savedFontSize) {
 			fontSize = parseInt(savedFontSize, 10);
+		}
+		
+		// Load saved sidebar visibility
+		const savedSidebarVisible = localStorage.getItem('aperture-sidebar-visible');
+		if (savedSidebarVisible !== null) {
+			sidebarVisible = savedSidebarVisible === 'true';
 		}
 		
 		window.addEventListener('keydown', handleKeyDown);
@@ -139,6 +146,12 @@
 		if (e.ctrlKey && e.key === 'k') {
 			e.preventDefault();
 			showQuickOpen = !showQuickOpen;
+		}
+		// Ctrl+B for sidebar toggle
+		if (e.ctrlKey && e.key === 'b') {
+			e.preventDefault();
+			sidebarVisible = !sidebarVisible;
+			localStorage.setItem('aperture-sidebar-visible', sidebarVisible.toString());
 		}
 		// Ctrl+F for find
 		if (e.ctrlKey && e.key === 'f') {
@@ -317,13 +330,15 @@
 <TitleBar />
 
 <div class="app">
-	<Sidebar 
-		bind:this={sidebarComponent}
-		initialPath={initialSidebarPath}
-		on:openFile={openFile}
-		on:pathChange={setCurrentPath}
-		on:branchChange={setBranch}
-	/>
+	{#if sidebarVisible}
+		<Sidebar 
+			bind:this={sidebarComponent}
+			initialPath={initialSidebarPath}
+			on:openFile={openFile}
+			on:pathChange={setCurrentPath}
+			on:branchChange={setBranch}
+		/>
+	{/if}
 	
 	<div class="main">
 		<TabBar 

@@ -23,8 +23,14 @@
 	let currentPath = $state('');
 	let rootFiles = $state<FileEntry[]>([]);
 	let gitStatuses = $state<Map<string, string>>(new Map());
+	let sidebarWidth = $state(240);
+	let isResizing = $state(false);
 
 	onMount(async () => {
+		const savedWidth = localStorage.getItem('aperture-sidebar-width');
+		if (savedWidth) {
+			sidebarWidth = parseInt(savedWidth, 10);
+		}
 		const startPath = initialPath || await getHomePath();
 		currentPath = startPath;
 		await loadDirectory(startPath);
@@ -133,6 +139,28 @@
 			await checkGitStatus(parentPath);
 			checkGitBranch(parentPath);
 		}
+	}
+
+	function startResize(e: MouseEvent) {
+		e.preventDefault();
+		isResizing = true;
+		const startX = e.clientX;
+		const startWidth = sidebarWidth;
+
+		function onMouseMove(e: MouseEvent) {
+			const delta = e.clientX - startX;
+			sidebarWidth = Math.min(500, Math.max(150, startWidth + delta));
+		}
+
+		function onMouseUp() {
+			isResizing = false;
+			localStorage.setItem('aperture-sidebar-width', sidebarWidth.toString());
+			document.removeEventListener('mousemove', onMouseMove);
+			document.removeEventListener('mouseup', onMouseUp);
+		}
+
+		document.addEventListener('mousemove', onMouseMove);
+		document.addEventListener('mouseup', onMouseUp);
 	}
 
 	function getGitStatusColor(filePath: string): string {
@@ -258,7 +286,7 @@
 	}
 </script>
 
-<aside class="sidebar">
+<aside class="sidebar" style="width: {sidebarWidth}px">
 	<div class="sidebar-header">
 		<button class="nav-up" onclick={navigateUp} title="Go up one level">
 			<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -311,16 +339,18 @@
 		</button>
 	{/each}
 	</div>
+	<div class="resize-handle" class:active={isResizing} onmousedown={startResize}></div>
 </aside>
 
 <style>
 	.sidebar {
-		width: 240px;
 		background: var(--bg-secondary);
 		border-right: 1px solid var(--border);
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
+		position: relative;
+		flex-shrink: 0;
 	}
 
 	.sidebar-header {
@@ -420,5 +450,20 @@
 		font-weight: 600;
 		margin-left: auto;
 		flex-shrink: 0;
+	}
+
+	.resize-handle {
+		position: absolute;
+		top: 0;
+		right: 0;
+		width: 4px;
+		height: 100%;
+		cursor: col-resize;
+		z-index: 10;
+	}
+
+	.resize-handle:hover,
+	.resize-handle.active {
+		background: var(--beige-400);
 	}
 </style>
